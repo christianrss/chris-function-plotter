@@ -1,3 +1,4 @@
+#include <array>
 #include <iostream>
 #include <cmath>
 #include <set>
@@ -47,7 +48,41 @@ void WindowClass::DrawSelection()
 
 void WindowClass::DrawPlot()
 {
+    static constexpr auto num_points = 10'000;
+    static constexpr auto x_min = -100.0;
+    static constexpr auto x_max = 100.0;
+    static const auto x_step = (std::abs(x_max) + std::abs(x_min)) / num_points;
 
+    static auto xs = std::array<double, num_points>{};
+    static auto ys = std::array<double, num_points>{};
+
+    if (selectedFunctions.size() == 0
+        || (selectedFunctions.size() == 1
+        && *selectedFunctions.begin() == Function::NONE))
+    {
+        ImPlot::BeginPlot("###plot", ImVec2(-1.0F, -1.0F), ImPlotFlags_NoTitle);
+        ImPlot::EndPlot();
+        return;
+    }
+
+    ImPlot::BeginPlot("###plot", ImVec2(-1.0F, -1.0F), ImPlotFlags_NoTitle);
+
+    for (const auto &function : selectedFunctions)
+    {
+        auto x = x_min;
+        for (std::size_t i = 0; i < num_points; ++i)
+        {
+            xs[i] = x;
+            ys[i] = evaluateFunction(function, x);
+            x += x_step;
+        }
+
+        const auto plot_label =
+            fmt::format("##function{}", static_cast<int>(function));
+        ImPlot::PlotLine(plot_label.data(), xs.data(), ys.data(), num_points);
+    }
+
+    ImPlot::EndPlot();
 }
 
 WindowClass::Function WindowClass::functionNameMapping(std::string_view function_name)
@@ -61,7 +96,7 @@ WindowClass::Function WindowClass::functionNameMapping(std::string_view function
     return WindowClass::Function::NONE;
 }
 
-double evaluateFunction(const WindowClass::Function function, const double x)
+double WindowClass::evaluateFunction(const WindowClass::Function function, const double x)
 {
     switch (function)
     {
@@ -71,7 +106,7 @@ double evaluateFunction(const WindowClass::Function function, const double x)
         }
         case WindowClass::Function::COS:
         {
-            return std::sin(x);
+            return std::cos(x);
         }
         case WindowClass::Function::NONE:
         default:
